@@ -2,7 +2,7 @@
 
 PROJECT = ARGV[0]
 
-abort "ERROR: Need 1.9.3 version" if VERSION.split(".").to_s.to_i != 193
+abort "ERROR: Need 1.9.3 version. Now #{RUBY_VERSION}" if RUBY_VERSION != "1.9.3"
 abort "ERROR: Need project name" if PROJECT == nil
 
 Dir.mkdir PROJECT 
@@ -25,14 +25,13 @@ require \"slim\"
 require \"./models/main\"
 require \"./controllers/site\"
 require \"./controllers/admin\"
-require \"./db\"
-require \"./helpers\"
+require \"./helpers/main\"
 "
 
 PROJECT__MODELS__MAIN_RB = "
 # encoding utf-8
 
-DataMapper.setup :default, \"sqlite:#{Dir.pwd}/db/main.db\"
+DataMapper.setup :default, \"sqlite:\#{Dir.pwd}/db/main.db\"
 
 class Foo
   include DataMapper::Resource
