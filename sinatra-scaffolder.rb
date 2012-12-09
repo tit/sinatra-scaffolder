@@ -1,134 +1,113 @@
 # encoding utf-8
-
-require "ruby-progressbar"
-
-PROJECT = ARGV[0]
+# http://code.jquery.com/jquery.min.js
+# http://twitter.github.com/bootstrap/assets/bootstrap.zip
 
 abort "ERROR: Need 1.9.3 version. Now #{RUBY_VERSION}" if RUBY_VERSION != "1.9.3"
-abort "ERROR: Need project name" if PROJECT == nil
 
-Dir.mkdir PROJECT 
-
-Dir.mkdir "#{PROJECT}/models"
-Dir.mkdir "#{PROJECT}/views"
-Dir.mkdir "#{PROJECT}/controllers"
-Dir.mkdir "#{PROJECT}/db"
-Dir.mkdir "#{PROJECT}/helpers"
-Dir.mkdir "#{PROJECT}/public"
-
-PROJECT__APP_RB = "
-# encoding utf-8
-
-require \"rubygems\"
-require \"sinatra\"
-require \"data_mapper\"
-require \"slim\"
-
-require \"./models/main\"
-require \"./controllers/site\"
-require \"./controllers/admin\"
-require \"./helpers/main\"
-"
-
-PROJECT__MODELS__MAIN_RB = "
-# encoding utf-8
-
-DataMapper.setup :default, \"sqlite:\#{Dir.pwd}/db/main.db\"
-
-class Foo
-  include DataMapper::Resource
-
-  property :id, Serial
+begin
+  require "rubygems"
+  require "ruby-progressbar"
+  require "trollop"
+rescue LoadError, Exception => exception
+  abort "ERROR: #{exception.message}"
 end
 
-DataMapper.finalize
-DataMapper.auto_upgrade!
-"
-
-PROJECT__VIEWS__SITE_INDEX_SLIM = "
-b Hello World
-"
-
-PROJECT__VIEWS__SITE_LAYOUT_SLIM = "
-doctype html
-html lang=\"en\"
-  head
-    title #{PROJECT}
-    meta charset=\"utf-8\"
-  body
-  == yield
-"
-
-PROJECT__VIEWS__ADMIN_INDEX_SLIM = "
-b Hello World
-"
-
-PROJECT__VIEWS__ADMIN_LAYOUT_SLIM = "
-doctype html
-html lang=\"en\"
-  head
-    title #{PROJECT}
-    meta charset=\"utf-8\"
-  body
-  == yield
-"
-
-PROJECT__CONROLLERS__SITE_RB = "
-# encoding utf-8
-
-get \"/\" do
-  # Do miracles here
-
-  slim :site_index, :layout => :site_layout, :locals => {}
+options = Trollop::options do
+  version "2"
+  banner "Sinatra-Scaffolder"
+  opt :project, "Project name", :type => :string, :required => :true
+  opt :libraries, "Include libraries. Now support: Bootstrap, jQuery", :type => :strings
+  opt :admin, "Use Admin and DataBase" # type => boolean, :default => false
+  opt :template_language, "Template language. Now support: slim", :type => :string, :default => "slim"
 end
-"
 
-PROJECT__CONROLLERS__ADMIN_RB = "
-# encoding utf-8
+dirs = 
+{
+  :models => "models",
+  :views => "views",
+  :controllers => "controllers",
+  :helpers => "helpers",
+  :db => "db",
+  :public => "public"
+}
 
-get \"/admin\" do
-  protected!
+files =
+{
+  :app => 
+  {
+    :app => "app.rb"
+  },
 
-  # Do miracles here
+  :models => 
+  {
+    :main => "#{dirs[:models]}/main.rb"
+  },
 
-  slim :admin_index, :layout => :admin_layout, :locals => {}
+  :views => 
+  {
+    :site_index => "#{dirs[:views]}/site_index.#{options[:template_language].downcase}",
+    :site_layout => "#{dirs[:views]}/site_layout.#{options[:template_language].downcase}",
+    :admin_index => "#{dirs[:views]}/admin_index.#{options[:template_language].downcase}",
+    :admin_layout => "#{dirs[:views]}/admin_layout.#{options[:template_language].downcase}"
+  },
+
+  :controllers => 
+  {
+    :site => "#{dirs[:controllers]}/site.rb",
+    :admin => "#{dirs[:controllers]}/admin.rb"
+  },
+
+  :helpers => 
+  {
+    :admin => "#{dirs[:helpers]}/admin.rb"
+  }
+}
+
+sources = 
+{
+  :app =>
+  {
+    :app => "# encoding utf-8\n\nrequire \"rubygems\"\nrequire \"sinatra\"\nrequire \"data_mapper\"\nrequire \"slim\"\nrequire \"require_all\"\n\nrequire_all \"./\""
+  },
+  
+  :models =>
+  {
+    :main => "# encoding utf-8\n\nDataMapper.setup :default, \"sqlite:\#{Dir.pwd}/db/main.db\""
+  },
+  
+  :views =>
+  {
+    :site_index => "b Hello World",
+    :site_layout => "doctype html\nhtml\n\thead\n\t\ttitle #{options[:project]}\n\t\tmeta charset=\"utf-8\"\n\tbody\n\t== yield",
+    :admin_index => "b Hello World",
+    :admin_layout => "doctype html\nhtml lang=\"en\"\n\thead\n\t\ttitle #{options[:project]}\n\t\t\meta charset=\"utf-8\"\n\tbody\n\t== yield"
+  },
+  
+  :controllers =>
+  {
+    :site => "# encoding utf-8\n\nget \"/\" do\n\t# Do miracles here\n\n\tslim :site_index, :layout => :site_layout, :locals => {}\nend",
+    :admin => "# encoding utf-8\n\nget \"/admin\" do\n\tprotected!\n\n\t# Do miracles here\n\n\tslim :admin_index, :layout => :admin_layout, :locals => {}\nend"
+  },
+  
+  :helpers =>
+  {
+    :admin => "# encoding utf-8\n\nhelpers do\n\tdef protected!\n\t\tunless authorized?\n\t\t\tresponse[\"WWW-Authenticate\"] = %(Basic realm=\"Restricted Area\")\n\t\t\tthrow(:halt, [401, \"Not authorized\\n\"])\n\t\tend\n\tend\n\tdef authorized?\n\t\t@auth ||= Rack::Auth::Basic::Request.new(request.env)\n\t\t@auth.provided? && @auth.basic? && @auth.credentials && @auth.credentials == [\"admin\", \"admin\"]\n\tend\nend"
+  }
+}
+
+Dir.mkdir options[:project].downcase
+Dir.chdir options[:project].downcase
+
+dirs.values.each do |dir|
+  Dir.mkdir dir.to_s
 end
-"
 
-PROJECT__HELPERS__MAIN_RB = "
-# encoding utf-8
-
-helpers do
-  def protected!
-    unless authorized?
-      response[\"WWW-Authenticate\"] = %(Basic realm=\"Restricted Area\")
-      throw(:halt, [401, \"Not authorized\\n\"])
-    end
-  end
-  def authorized?
-    @auth ||= Rack::Auth::Basic::Request.new(request.env)
-    @auth.provided? && @auth.basic? && @auth.credentials && @auth.credentials == [\"admin\", \"admin\"]
-  end
-end
-"
-
-ProgressBar.create :total => 9, :output => STDERR
-
-IO.write "#{PROJECT}/app.rb", PROJECT__APP_RB
-ProgressBar.increment
-IO.write "#{PROJECT}/models/main.rb", PROJECT__MODELS__MAIN_RB
-ProgressBar.increment
-IO.write "#{PROJECT}/views/site_index.slim", PROJECT__VIEWS__SITE_INDEX_SLIM
-ProgressBar.increment
-IO.write "#{PROJECT}/views/site_layout.slim", PROJECT__VIEWS__SITE_LAYOUT_SLIM
-ProgressBar.increment
-IO.write "#{PROJECT}/views/admin_index.slim", PROJECT__VIEWS__ADMIN_INDEX_SLIM
-ProgressBar.increment
-IO.write "#{PROJECT}/views/admin_layout.slim", PROJECT__VIEWS__ADMIN_LAYOUT_SLIM
-ProgressBar.increment
-IO.write "#{PROJECT}/controllers/site.rb", PROJECT__CONROLLERS__SITE_RB
-ProgressBar.increment
-IO.write "#{PROJECT}/controllers/admin.rb", PROJECT__CONROLLERS__ADMIN_RB
-ProgressBar.increment
-IO.write "#{PROJECT}/helpers/main.rb", PROJECT__HELPERS__MAIN_RB
-ProgressBar.increment
+IO.write files[:app][:app], sources[:app][:app]
+IO.write files[:models][:main], sources[:models][:main] 
+IO.write files[:views][:site_index], sources[:views][:site_index]
+IO.write files[:views][:site_layout], sources[:views][:site_layout]
+IO.write files[:views][:admin_index], sources[:views][:admin_index]
+IO.write files[:views][:admin_layout], sources[:views][:admin_layout]
+IO.write files[:controllers][:site], sources[:controllers][:site]
+IO.write files[:controllers][:admin], sources[:controllers][:admin]
+IO.write files[:helpers][:admin], sources[:helpers][:admin]
