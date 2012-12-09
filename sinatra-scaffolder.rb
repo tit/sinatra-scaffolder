@@ -98,16 +98,12 @@ sources =
 Dir.mkdir options[:project].downcase
 Dir.chdir options[:project].downcase
 
-dirs.values.each do |dir|
-  Dir.mkdir dir.to_s
+dirs.each_key do |key|
+  Dir.mkdir dirs[key]
 end
 
-IO.write files[:app][:app], sources[:app][:app]
-IO.write files[:models][:main], sources[:models][:main] 
-IO.write files[:views][:site_index], sources[:views][:site_index]
-IO.write files[:views][:site_layout], sources[:views][:site_layout]
-IO.write files[:views][:admin_index], sources[:views][:admin_index]
-IO.write files[:views][:admin_layout], sources[:views][:admin_layout]
-IO.write files[:controllers][:site], sources[:controllers][:site]
-IO.write files[:controllers][:admin], sources[:controllers][:admin]
-IO.write files[:helpers][:admin], sources[:helpers][:admin]
+files.each_key do |key_a|
+  files[key_a].each_key do |key_b|
+    IO.write files[key_a][key_b], sources[key_a][key_b]
+  end
+end
