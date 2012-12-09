@@ -1,5 +1,7 @@
 # encoding utf-8
 
+require "ruby-progressbar"
+
 PROJECT = ARGV[0]
 
 abort "ERROR: Need 1.9.3 version. Now #{RUBY_VERSION}" if RUBY_VERSION != "1.9.3"
@@ -110,12 +112,23 @@ helpers do
 end
 "
 
+ProgressBar.create :total => 9, :output => STDERR
+
 IO.write "#{PROJECT}/app.rb", PROJECT__APP_RB
+ProgressBar.increment
 IO.write "#{PROJECT}/models/main.rb", PROJECT__MODELS__MAIN_RB
+ProgressBar.increment
 IO.write "#{PROJECT}/views/site_index.slim", PROJECT__VIEWS__SITE_INDEX_SLIM
+ProgressBar.increment
 IO.write "#{PROJECT}/views/site_layout.slim", PROJECT__VIEWS__SITE_LAYOUT_SLIM
+ProgressBar.increment
 IO.write "#{PROJECT}/views/admin_index.slim", PROJECT__VIEWS__ADMIN_INDEX_SLIM
+ProgressBar.increment
 IO.write "#{PROJECT}/views/admin_layout.slim", PROJECT__VIEWS__ADMIN_LAYOUT_SLIM
+ProgressBar.increment
 IO.write "#{PROJECT}/controllers/site.rb", PROJECT__CONROLLERS__SITE_RB
+ProgressBar.increment
 IO.write "#{PROJECT}/controllers/admin.rb", PROJECT__CONROLLERS__ADMIN_RB
+ProgressBar.increment
 IO.write "#{PROJECT}/helpers/main.rb", PROJECT__HELPERS__MAIN_RB
+ProgressBar.increment
